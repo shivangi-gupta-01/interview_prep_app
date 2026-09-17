@@ -1,0 +1,276 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>{{ app_name }}</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,500;9..144,600;9..144,700&family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet">
+<script>
+  tailwind = { config: { theme: { extend: {
+    fontFamily: { display: ['Fraunces', 'serif'], body: ['Inter', 'sans-serif'], mono: ['JetBrains Mono', 'monospace'] },
+    colors: { ink: '#20312d', paper: '#eef3f0', 'paper-dim': '#667873', panel: '#f8faf8', 'panel-raised': '#e2ece7', accent: '#c77b52', 'accent-dark': '#a96342', teal: '#3b7f76', danger: '#b85f5a', success: '#4d8a69', line: '#d3dfda' }
+  } } };
+</script>
+<script src="https://cdn.tailwindcss.com"></script>
+<style>
+  html { min-height: 100%; }
+  body { margin: 0; min-height: 100vh; background: linear-gradient(135deg, #eef3f0, #f7f2ea); color: #20312d; font-family: Inter, sans-serif; font-size: 15px; line-height: 1.5; }
+  input, select, textarea { min-width: 0; }
+  input[type="text"], input[type="number"], input[type="file"], select, textarea { border: 1px solid #d3dfda; border-radius: 3px; background: white; padding: .625rem .75rem; color: #20312d; outline: none; }
+  input:focus, select:focus, textarea:focus { border-color: #c77b52; box-shadow: 0 0 0 2px rgb(199 123 82 / .4); }
+  em { color: #667873; font-size: .75rem; font-style: normal; }
+  .tab { transition: background-color .15s, border-color .15s; }
+  .tab.active { border-color: #a96342; background: #e2ece7; }
+  .tab.active .tab-label { color: #20312d; }
+  .tab.active .tab-index { color: #c77b52; }
+  .tab:not(.active) .tab-label, .tab:not(.active) .tab-desc { color: #667873; }
+  .results { display: flex; flex-direction: column; gap: 18px; margin-top: 2.25rem; }
+  .card, .section-block { border: 1px solid #d3dfda; border-radius: 3px; background: rgb(255 255 255 / .8); padding: 1.25rem; }
+  .card-top, .card-tags, .card-actions, .kw-group { display: flex; flex-wrap: wrap; align-items: center; gap: .5rem; }
+  .card-q { margin: .5rem 0; font-family: Fraunces, serif; font-size: 17px; font-weight: 600; }
+  .card-sub { margin-bottom: .625rem; color: #667873; font-size: .75rem; }
+  .card-sub b { color: #20312d; }
+  .bullets { margin: .375rem 0; padding-left: 18px; color: #20312d; font-size: 13.5px; }
+  .bullets li { margin-bottom: .25rem; }
+  .tag, .kw { border: 1px solid #d3dfda; border-radius: 3px; padding: .125rem .5rem; color: #667873; font-family: 'JetBrains Mono', monospace; font-size: 11px; letter-spacing: .08em; text-transform: uppercase; }
+  .tag.technical { border-color: #3b7f76; color: #3b7f76; }
+  .tag.behavioral, .tag.situational, .tag.medium { border-color: #c77b52; color: #c77b52; }
+  .tag.easy { border-color: #4d8a69; color: #4d8a69; }
+  .tag.hard { border-color: #b85f5a; color: #b85f5a; }
+  .loading { display: flex; align-items: center; gap: .5rem; color: #667873; font-family: 'JetBrains Mono', monospace; font-size: .75rem; }
+  .spinner { height: 14px; width: 14px; border: 2px solid #d3dfda; border-top-color: #c77b52; border-radius: 50%; animation: spin .8s linear infinite; }
+  .error-box { border: 1px solid #b85f5a; border-radius: 3px; background: rgb(184 95 90 / .1); padding: .75rem 1rem; color: #b85f5a; font-size: 13px; }
+  .summary-line { border-left: 3px solid #c77b52; padding-left: .875rem; font-family: Fraunces, serif; font-size: 1rem; }
+  .link-btn { cursor: pointer; border: 0; background: transparent; padding: 0; color: #3b7f76; font-family: 'JetBrains Mono', monospace; font-size: .75rem; text-decoration: underline; text-underline-offset: 4px; }
+  .answer-box textarea { margin-top: .625rem; width: 100%; }
+  .eval-result { margin-top: .75rem; border-top: 1px dashed #d3dfda; padding-top: .75rem; }
+  .eval-score { color: #c77b52; font-family: 'JetBrains Mono', monospace; font-size: 22px; }
+  .ats-summary { display: grid; align-items: center; gap: 1.75rem; border: 1px solid #d3dfda; border-radius: 3px; background: #f8faf8; padding: 1.5rem; }
+  .dial-wrap { position: relative; height: 150px; width: 150px; }
+  .dial-score { position: absolute; inset: 0; display: flex; flex-direction: column; align-items: center; justify-content: center; }
+  .dial-score .num { font-family: Fraunces, serif; font-size: 34px; font-weight: 600; }
+  .dial-score .lbl, .diff-col-label { color: #667873; font-family: 'JetBrains Mono', monospace; font-size: 10px; text-transform: uppercase; }
+  .cat-row { display: grid; align-items: center; gap: .625rem; font-size: 13px; }
+  .cat-bar-track { height: 8px; overflow: hidden; border-radius: 999px; background: #e2ece7; }
+  .cat-bar-fill { height: 100%; background: #3b7f76; }
+  .cat-findings { color: #667873; font-size: .75rem; }
+  .kw.matched { border: 0; background: rgb(77 138 105 / .15); color: #4d8a69; }
+  .kw.missing { border: 0; background: rgb(184 95 90 / .15); color: #b85f5a; }
+  .diff { display: grid; gap: .875rem; }
+  .diff-old, .diff-new, .full-resume { white-space: pre-wrap; }
+  .diff-old { color: #667873; text-decoration: line-through; }
+  .full-resume { max-height: 500px; overflow-y: auto; border: 1px solid #d3dfda; border-radius: 3px; background: #f8faf8; padding: 1.25rem; font-family: 'JetBrains Mono', monospace; font-size: .75rem; }
+  .section-block h4 { margin-bottom: .375rem; font-family: Fraunces, serif; font-size: 15px; }
+  .section-block .reason { margin-bottom: .625rem; color: #3b7f76; font-size: .75rem; }
+  .panel-enter { animation: panel-enter .25s ease; }
+  @keyframes panel-enter { from { opacity: 0; transform: translateY(4px); } to { opacity: 1; transform: none; } }
+  @keyframes spin { to { transform: rotate(360deg); } }
+  @media (min-width: 768px) { .ats-summary { grid-template-columns: 160px 1fr; } .cat-row { grid-template-columns: 180px 1fr 40px; } .cat-findings { margin-left: 190px; } .diff { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+  @media (max-width: 1023px) { #sidebar { position: fixed; inset: 0 auto 0 0; z-index: 30; width: min(300px, 86vw); transform: translateX(-100%); overflow-y: auto; border-right: 1px solid #d3dfda; background: rgb(255 255 255 / .97); transition: transform .2s ease; } #sidebar.mobile-open { transform: translateX(0); } #sidebarBackdrop { position: fixed; inset: 0; z-index: 20; background: rgb(32 49 45 / .25); } }
+  @media (prefers-reduced-motion: reduce) { *, *::before, *::after { animation: none !important; transition: none !important; } }
+</style>
+</head>
+<body>
+
+<button id="menuButton" aria-label="Open features" aria-expanded="false" class="fixed right-4 top-4 z-40 rounded-sm border border-line bg-white p-2 text-ink shadow-sm lg:hidden">☰</button>
+<div id="sidebarBackdrop" class="hidden"></div>
+<div class="min-h-screen lg:pl-[300px]">
+  <aside id="sidebar" class="flex h-screen flex-col border-line bg-white/75 p-4 lg:fixed lg:inset-y-0 lg:left-0 lg:z-30 lg:w-[300px] lg:border-r lg:p-7">
+    <div class="mb-5 flex items-center gap-3 lg:mb-9">
+      <span class="rounded-sm bg-accent px-2 py-1.5 font-mono text-xs font-semibold tracking-wider text-paper">IC</span>
+      <div>
+        <div class="font-display text-lg font-semibold">Interview Coach</div>
+        <div class="font-mono text-xs text-paper-dim">Case file &amp; prep desk</div>
+      </div>
+    </div>
+
+    <nav class="grid grid-cols-1 gap-1.5 sm:grid-cols-2 lg:grid-cols-1" id="tabs">
+      <button class="tab active rounded-sm border border-accent-dark bg-panel-raised p-3 text-left" data-tab="interview">
+        <span class="tab-index mr-2 font-mono text-[11px] text-accent">01</span>
+        <span class="tab-label font-semibold text-ink">Role &amp; JD Interview</span>
+        <span class="tab-desc ml-7 block text-xs text-paper-dim">General or role-specific questions</span>
+      </button>
+      <button class="tab rounded-sm border border-transparent p-3 text-left" data-tab="scenario">
+        <span class="tab-index mr-2 font-mono text-[11px] text-accent-dark">02</span>
+        <span class="tab-label font-semibold text-paper-dim">Resume Scenarios</span>
+        <span class="tab-desc ml-7 block text-xs text-paper-dim">Situational Q&amp;A from your resume</span>
+      </button>
+      <button class="tab rounded-sm border border-transparent p-3 text-left" data-tab="ats">
+        <span class="tab-index mr-2 font-mono text-[11px] text-accent-dark">03</span>
+        <span class="tab-label font-semibold text-paper-dim">ATS Resume Score</span>
+        <span class="tab-desc ml-7 block text-xs text-paper-dim">Score + rewrite to 100%</span>
+      </button>
+      <button class="tab rounded-sm border border-transparent p-3 text-left" data-tab="agent">
+        <span class="tab-index mr-2 font-mono text-[11px] text-accent-dark">04</span>
+        <span class="tab-label font-semibold text-paper-dim">AI Coach</span>
+        <span class="tab-desc ml-7 block text-xs text-paper-dim">Ask the agent to choose a workflow</span>
+      </button>
+    </nav>
+
+    <div class="mt-auto flex items-center gap-1.5 font-mono text-[11px] text-paper-dim">
+      <span class="h-2 w-2 rounded-full bg-success"></span> API status: <span id="apiStatus">checking…</span>
+    </div>
+  </aside>
+
+  <main class="mx-auto w-full max-w-[1080px] px-5 py-7 lg:px-14 lg:py-11">
+
+    <!-- ============ TAB 1: INTERVIEW ============ -->
+    <section class="panel active panel-enter" id="panel-interview">
+      <header class="mb-7 max-w-prose">
+        <h1 class="mb-1.5 font-display text-3xl font-semibold">Interview question builder</h1>
+        <p class="text-paper-dim">Answer a few prompts — general practice, or paste a job description for a fully tailored set.</p>
+      </header>
+
+      <form id="interviewForm" class="flex max-w-3xl flex-col gap-4">
+        <div class="grid gap-4 sm:grid-cols-2">
+          <label class="flex flex-col gap-1.5 text-[13px] text-paper-dim">
+            <span>Target role</span>
+            <input type="text" name="role" placeholder="e.g. Backend Engineer (Django)" required>
+          </label>
+          <label class="flex flex-col gap-1.5 text-[13px] text-paper-dim">
+            <span>Experience level</span>
+            <select name="experience_level">
+              <option value="entry">Entry</option>
+              <option value="mid" selected>Mid</option>
+              <option value="senior">Senior</option>
+              <option value="lead">Lead / Staff</option>
+            </select>
+          </label>
+        </div>
+
+        <label class="flex flex-col gap-1.5 text-[13px] text-paper-dim">
+          <span>Key skills <em>(comma separated)</em></span>
+          <input type="text" name="skills" placeholder="Python, Django, PostgreSQL, Docker, AWS">
+        </label>
+
+        <div class="grid gap-4 sm:grid-cols-2">
+          <label class="flex flex-col gap-1.5 text-[13px] text-paper-dim">
+            <span>Question mix</span>
+            <select name="question_mix">
+              <option value="balanced" selected>Balanced</option>
+              <option value="technical">Technical-heavy</option>
+              <option value="behavioral">Behavioral-heavy</option>
+              <option value="system_design">System design-heavy</option>
+            </select>
+          </label>
+          <label class="flex flex-col gap-1.5 text-[13px] text-paper-dim">
+            <span># of questions</span>
+            <input type="number" name="num_questions" value="8" min="1" max="20">
+          </label>
+        </div>
+
+        <label class="flex flex-col gap-1.5 text-[13px] text-paper-dim">
+          <span>Target company <em>(optional)</em></span>
+          <input type="text" name="company" placeholder="e.g. Stripe">
+        </label>
+
+        <label class="flex flex-col gap-1.5 text-[13px] text-paper-dim">
+          <span>Job description <em>(optional — for personalized questions)</em></span>
+          <textarea name="job_description" rows="5" placeholder="Paste the JD here for tightly tailored questions…"></textarea>
+        </label>
+
+        <button class="w-fit rounded-sm bg-accent px-5 py-3 text-sm font-semibold text-paper hover:bg-accent-dark" type="submit">Generate questions</button>
+      </form>
+
+      <div id="interviewResults" class="results"></div>
+    </section>
+
+    <section class="panel hidden panel-enter" id="panel-agent">
+      <header class="mb-7 max-w-prose">
+        <h1 class="mb-1.5 font-display text-3xl font-semibold">Ask the AI coach</h1>
+        <p class="text-paper-dim">Describe what you need. The agent can choose interview questions, resume scenarios, ATS scoring, or rewriting.</p>
+      </header>
+      <form id="agentForm" class="flex max-w-3xl flex-col gap-4">
+        <label class="flex flex-col gap-1.5 text-[13px] text-paper-dim">
+          <span>What do you need?</span>
+          <textarea name="message" rows="4" required placeholder="e.g. Create senior backend questions from my resume"></textarea>
+        </label>
+        <label class="flex flex-col gap-1.5 text-[13px] text-paper-dim">
+          <span>Resume text <em>(optional)</em></span>
+          <textarea name="resume_text" rows="6" placeholder="Paste resume text when your request needs it"></textarea>
+        </label>
+        <label class="flex flex-col gap-1.5 text-[13px] text-paper-dim">
+          <span>Job description <em>(optional)</em></span>
+          <textarea name="job_description" rows="4" placeholder="Paste a target JD for tailored results"></textarea>
+        </label>
+        <button class="w-fit rounded-sm bg-accent px-5 py-3 text-sm font-semibold text-paper hover:bg-accent-dark" type="submit">Ask the coach</button>
+      </form>
+      <div id="agentResults" class="results"></div>
+    </section>
+
+    <!-- ============ TAB 2: SCENARIOS ============ -->
+    <section class="panel hidden panel-enter" id="panel-scenario">
+      <header class="mb-7 max-w-prose">
+        <h1 class="mb-1.5 font-display text-3xl font-semibold">Resume-grounded scenarios</h1>
+        <p class="text-paper-dim">Upload your resume (or paste it) to get situational questions built from your real projects.</p>
+      </header>
+
+      <form id="scenarioForm" class="flex max-w-3xl flex-col gap-4">
+        <label class="flex flex-col gap-1.5 text-[13px] text-paper-dim">
+          <span>Resume file <em>(.pdf, .docx, .txt)</em></span>
+          <input type="file" name="file" accept=".pdf,.docx,.txt">
+        </label>
+        <label class="flex flex-col gap-1.5 text-[13px] text-paper-dim">
+          <span>…or paste resume text</span>
+          <textarea name="resume_text" rows="6" placeholder="Paste your resume text here if you'd rather not upload a file"></textarea>
+        </label>
+        <div class="grid gap-4 sm:grid-cols-2">
+          <label class="flex flex-col gap-1.5 text-[13px] text-paper-dim">
+            <span>Target role <em>(optional)</em></span>
+            <input type="text" name="role" placeholder="e.g. Full-stack Engineer">
+          </label>
+          <label class="flex flex-col gap-1.5 text-[13px] text-paper-dim">
+            <span># of scenarios</span>
+            <input type="number" name="num_scenarios" value="6" min="1" max="15">
+          </label>
+        </div>
+        <label class="flex flex-col gap-1.5 text-[13px] text-paper-dim">
+          <span>Job description <em>(optional)</em></span>
+          <textarea name="job_description" rows="4" placeholder="Paste a JD to bias scenarios toward this role…"></textarea>
+        </label>
+        <button class="w-fit rounded-sm bg-accent px-5 py-3 text-sm font-semibold text-paper hover:bg-accent-dark" type="submit">Build scenarios</button>
+      </form>
+
+      <div id="scenarioResults" class="results"></div>
+    </section>
+
+    <!-- ============ TAB 3: ATS ============ -->
+    <section class="panel hidden panel-enter" id="panel-ats">
+      <header class="mb-7 max-w-prose">
+        <h1 class="mb-1.5 font-display text-3xl font-semibold">ATS resume score &amp; rewrite</h1>
+        <p class="text-paper-dim">Score your resume's ATS-friendliness, then generate an optimized rewrite.</p>
+      </header>
+
+      <form id="atsForm" class="flex max-w-3xl flex-col gap-4">
+        <label class="flex flex-col gap-1.5 text-[13px] text-paper-dim">
+          <span>Resume file <em>(.pdf, .docx, .txt)</em></span>
+          <input type="file" name="file" accept=".pdf,.docx,.txt">
+        </label>
+        <label class="flex flex-col gap-1.5 text-[13px] text-paper-dim">
+          <span>…or paste resume text</span>
+          <textarea name="resume_text" rows="6" placeholder="Paste your resume text here if you'd rather not upload a file"></textarea>
+        </label>
+        <label class="flex flex-col gap-1.5 text-[13px] text-paper-dim">
+          <span>Job description <em>(optional but recommended)</em></span>
+          <textarea name="job_description" rows="4" placeholder="Paste the target JD for keyword matching…"></textarea>
+        </label>
+        <div class="flex flex-col gap-3 sm:flex-row">
+          <button class="w-full rounded-sm bg-accent px-5 py-3 text-sm font-semibold text-paper hover:bg-accent-dark sm:w-fit" type="submit" id="scoreBtn">Score my resume</button>
+          <button class="w-full rounded-sm border border-teal px-5 py-3 text-sm font-semibold text-teal hover:bg-teal/10 sm:w-fit" type="button" id="optimizeBtn" disabled>Rewrite to maximize score</button>
+        </div>
+      </form>
+
+      <div id="atsResults" class="results"></div>
+    </section>
+
+  </main>
+</div>
+
+<template id="tpl-loading">
+  <div class="loading"><span class="spinner"></span> Working on it…</div>
+</template>
+
+<script src="/static/app.js"></script>
+</body>
+</html>
