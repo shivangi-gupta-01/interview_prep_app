@@ -53,6 +53,7 @@ function showError(container, msg) {
 
 function getFriendlyError(message) {
   const text = String(message || "").toLowerCase();
+  if (text.includes("quota") || text.includes("resourceexhausted") || text.includes("429")) return "Gemini quota exhausted. Please try again later or check your billing plan.";
   if (text.includes("gemini_api_key") || text.includes("not configured")) return "AI service is not configured.";
   if (text.includes("timeout") || text.includes("timed out")) return "The AI service took too long to respond.";
   if (text.includes("resume") && text.includes("provide")) return "Please upload a resume or paste its text.";

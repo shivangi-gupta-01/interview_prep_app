@@ -1,4 +1,3 @@
-import re
 from typing import Optional
 
 from fastapi import APIRouter, HTTPException, UploadFile, File, Form
@@ -15,50 +14,9 @@ from app.services.resume_service import resolve_resume_text
 router = APIRouter(prefix="/api/ats", tags=["ats"])
 
 
-def _keywords(text: str) -> set[str]:
-    return {word.lower() for word in re.findall(r"[a-zA-Z][a-zA-Z+#.-]{1,}", text)}
-
-
-def _local_ats_report(resume_text: str, job_description: str | None) -> ATSReport:
-    resume_words = _keywords(resume_text)
-    jd_words = _keywords(job_description or "")
-    target_words = {word for word in jd_words if len(word) > 2}
-    matched = sorted(resume_words & target_words)
-    missing = sorted(target_words - resume_words)
-    section_names = {line.strip().lower() for line in resume_text.splitlines() if line.strip()}
-    expected_sections = {"summary", "experience", "skills", "education", "projects"}
-    section_score = min(100, 35 + 13 * len(expected_sections & section_names))
-    quantified = sum(1 for line in resume_text.splitlines() if any(char.isdigit() for char in line))
-    impact_score = min(100, 45 + quantified * 10)
-    keyword_score = 72 if not target_words else min(100, round(len(matched) / max(len(target_words), 1) * 100))
-    parse_score = 85 if len(resume_text.splitlines()) > 5 else 60
-    clarity_score = 75 if len(resume_text) <= 12000 else 55
-    overall = round(parse_score * .2 + keyword_score * .3 + section_score * .15 + impact_score * .2 + clarity_score * .15)
-    return ATSReport(
-        overall_score=overall,
-        verdict="Good foundation with targeted improvements available.",
-        category_scores=[
-            {"name": "Parseability & Formatting", "score": parse_score, "max_score": 100, "findings": ["Use standard section headings and simple text formatting."]},
-            {"name": "Keyword & Skills Match", "score": keyword_score, "max_score": 100, "findings": [f"Matched {len(matched)} target keywords."]},
-            {"name": "Section Completeness", "score": section_score, "max_score": 100, "findings": [f"Recognized {len(expected_sections & section_names)} of {len(expected_sections)} common sections."]},
-            {"name": "Impact & Quantification", "score": impact_score, "max_score": 100, "findings": ["Add measurable outcomes to more experience bullets."]},
-            {"name": "Clarity & Length", "score": clarity_score, "max_score": 100, "findings": ["Keep bullets concise and focused on outcomes."]},
-        ],
-        missing_keywords=missing[:30],
-        matched_keywords=matched[:30],
-        quick_wins=["Add missing job keywords where they truthfully describe your experience.", "Rewrite duty-based bullets with action and measurable outcomes.", "Use standard headings: Summary, Experience, Skills, and Education."],
-        formatting_issues=[],
-    )
-
-
-def _local_ats_optimize(resume_text: str, report: ATSReport | None) -> ATSOptimizeResult:
-    rewritten = "\n".join(line.strip() for line in resume_text.splitlines() if line.strip())
-    reason = "Preserved the original claims and normalized the resume into ATS-safe plain text."
-    return ATSOptimizeResult(
-        rewritten_sections=[{"section": "Full resume", "original": resume_text, "rewritten": rewritten, "reason": reason}],
-        full_rewritten_resume=rewritten,
-        projected_score=min(100, (report.overall_score if report else 60) + 12),
-    )
+def _is_quota_error(exc: Exception) -> bool:
+    error_text = str(exc).lower()
+    return "429" in error_text or "quota" in error_text or "resourceexhausted" in error_text
 
 
 @router.post("/score", response_model=ATSReport)
@@ -77,8 +35,11 @@ async def score_resume(
     try:
         return await call_structured(system, user, ATSReport)
     except Exception as exc:
-        if "429" in str(exc) or "quota" in str(exc).lower() or "resourceexhausted" in str(exc).lower():
-            return _local_ats_report(text, job_description)
+        if _is_quota_error(exc):
+            raise HTTPException(
+                status_code=429,
+                detail="Gemini quota exhausted. Please try again later or check your billing plan.",
+            ) from exc
         raise HTTPException(status_code=502, detail="AI service could not score the resume.") from exc
 
 
@@ -105,6 +66,9 @@ async def optimize_resume(
     try:
         return await call_structured(system, user, ATSOptimizeResult)
     except Exception as exc:
-        if "429" in str(exc) or "quota" in str(exc).lower() or "resourceexhausted" in str(exc).lower():
-            return _local_ats_optimize(text, report)
+        if _is_quota_error(exc):
+            raise HTTPException(
+                status_code=429,
+                detail="Gemini quota exhausted. Please try again later or check your billing plan.",
+            ) from exc
         raise HTTPException(status_code=502, detail="AI service could not rewrite the resume.") from exc
