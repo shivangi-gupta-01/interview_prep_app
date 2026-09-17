@@ -32,7 +32,7 @@ def get_llm() -> ChatGoogleGenerativeAI:
         temperature=settings.llm_temperature,
         max_tokens=settings.llm_max_tokens,
         timeout=45,
-        max_retries=2,
+        max_retries=0,
     )
 
 
@@ -71,7 +71,8 @@ async def _generate_structured(system_prompt: str, user_prompt: str, schema: typ
             return result if isinstance(result, schema) else schema.model_validate(result)
         except Exception as exc:
             last_error = exc
-            if attempt == 0:
+            error_text = str(exc).lower()
+            if attempt == 0 and "429" not in error_text and "quota" not in error_text and "resourceexhausted" not in error_text:
                 await asyncio.sleep(0.25)
     raise last_error  # type: ignore[misc]
 

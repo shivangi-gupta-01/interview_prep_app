@@ -229,7 +229,8 @@ function renderScenarios(data) {
 const atsForm = document.getElementById("atsForm");
 const atsResults = document.getElementById("atsResults");
 const optimizeBtn = document.getElementById("optimizeBtn");
-let lastAtsPayload = null; // { file or resume_text, job_description }
+let lastAtsPayload = null;
+let lastAtsReport = null;
 
 atsForm.addEventListener("submit", async (e) => {
   e.preventDefault();
@@ -250,16 +251,17 @@ atsForm.addEventListener("submit", async (e) => {
   try {
     const data = await postForm("/api/ats/score", fd);
     renderAtsReport(data);
-    fd.set("ats_report", JSON.stringify(data));
-    atsForm.dataset.atsReport = JSON.stringify(data);
+    lastAtsReport = data;
     optimizeBtn.disabled = false;
   } catch (err) {
     showError(atsResults, err.message);
+    lastAtsPayload = null;
+    lastAtsReport = null;
   }
 });
 
 optimizeBtn.addEventListener("click", async () => {
-  if (!lastAtsPayload) return;
+  if (!lastAtsPayload || !lastAtsReport) return;
   optimizeBtn.disabled = true;
   const container = document.createElement("div");
   container.innerHTML = `<div class="loading"><span class="spinner"></span> Rewriting your resume…</div>`;
@@ -269,7 +271,7 @@ optimizeBtn.addEventListener("click", async () => {
     if (lastAtsPayload.file) fd.append("file", lastAtsPayload.file);
     if (lastAtsPayload.resumeText) fd.append("resume_text", lastAtsPayload.resumeText);
     if (lastAtsPayload.jobDescription) fd.append("job_description", lastAtsPayload.jobDescription);
-    fd.append("ats_report", JSON.stringify(JSON.parse(atsForm.dataset.atsReport)));
+    fd.append("ats_report", JSON.stringify(lastAtsReport));
     const data = await postForm("/api/ats/optimize", fd);
     container.outerHTML = renderAtsOptimize(data);
   } catch (err) {
